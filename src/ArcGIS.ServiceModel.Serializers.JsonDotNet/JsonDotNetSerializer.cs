@@ -1,4 +1,6 @@
-﻿namespace ArcGIS.ServiceModel.Serializers
+﻿using ArcGIS.ServiceModel.Serializers.JsonDotNet.CustomJsonConverters;
+
+namespace ArcGIS.ServiceModel.Serializers
 {
     using ArcGIS.ServiceModel;
     using ArcGIS.ServiceModel.Operation;
@@ -14,6 +16,11 @@
             SerializerFactory.Get = (() => _serializer ?? new JsonDotNetSerializer(settings));
         }
 
+        private void ApplyCustomObjectConverters()
+        {
+            _settings.Converters.Add(new DomainJsonConverter());
+        }
+
         readonly Newtonsoft.Json.JsonSerializerSettings _settings;
 
         public JsonDotNetSerializer(Newtonsoft.Json.JsonSerializerSettings settings = null)
@@ -25,6 +32,8 @@
                 StringEscapeHandling = Newtonsoft.Json.StringEscapeHandling.EscapeHtml,
                 TypeNameHandling = Newtonsoft.Json.TypeNameHandling.None
             };
+
+            ApplyCustomObjectConverters();
         }
 
         public Dictionary<string, string> AsDictionary<T>(T objectToConvert) where T : CommonParameters

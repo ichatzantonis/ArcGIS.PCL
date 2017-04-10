@@ -269,6 +269,48 @@ namespace ArcGIS.ServiceModel.Operation
     }
 
     [DataContract]
+    public class Domain
+    {
+        [DataMember(Name = "type")]
+        public string Type { get; set; }
+    }
+
+    [DataContract]
+    public class RangeDomain : Domain
+    {
+        [DataMember(Name = "name")]
+        public string Name { get; set; }
+
+        [DataMember(Name = "range")]
+        public long[] Range { get; set; }
+    }
+
+    [DataContract]
+    public class CodedValueDomain : Domain
+    {
+        [DataMember(Name = "name")]
+        public string Name { get; set; }
+
+        [DataMember(Name = "codedValues")]
+        public List<CodedValue> CodedValues{ get; set; }
+    }
+
+    [DataContract]
+    public class InheritedDomain : Domain
+    {
+    }
+
+    [DataContract]
+    public class CodedValue
+    {
+        [DataMember(Name = "name")]
+        public string Name { get; set; }
+
+        [DataMember(Name = "code")]
+        public long Code { get; set; }
+    }
+
+    [DataContract]
     public class Field
     {
         [DataMember(Name = "name")]
@@ -288,6 +330,10 @@ namespace ArcGIS.ServiceModel.Operation
 
         [DataMember(Name = "editable")]
         public bool? Editable { get; set; }
+
+
+        [DataMember(Name = "domain")]
+        public Domain Domain { get; set; }
     }
 
     /// <summary>
