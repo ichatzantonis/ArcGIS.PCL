@@ -282,6 +282,12 @@ namespace ArcGIS.ServiceModel.Operation
 
         [DataMember(Name = "length")]
         public int? Length { get; set; }
+
+        [DataMember(Name = "nullable")]
+        public bool? Nullable { get; set; }
+
+        [DataMember(Name = "editable")]
+        public bool? Editable { get; set; }
     }
 
     /// <summary>
