@@ -136,6 +136,9 @@
         [DataMember(Name = "allowGeometryUpdates")]
         public bool? AllowGeometryUpdates { get; set; }
 
+        [DataMember(Name = "relationships")]
+        public List<Relationship> Relationships { get; set; }
+
         [DataMember(Name = "supportsCalculate")]
         public bool? SupportsCalculate { get; set; }
 
@@ -156,6 +159,19 @@
 
         [DataMember(Name = "typeIdField")]
         public string TypeIdField { get; set; }
+    }
+
+    [DataContract]
+    public class Relationship
+    {
+        [DataMember(Name = "id")]
+        public int Id { get; set; }
+
+        [DataMember(Name = "name")]
+        public string Name { get; set; }
+
+        [DataMember(Name = "relatedTableId")]
+        public int RelatedTableId { get; set; }
     }
 
     [DataContract]
