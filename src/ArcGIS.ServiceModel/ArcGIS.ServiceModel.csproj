@@ -64,6 +64,7 @@
     <Compile Include="Operation\ArcGISServerOperation.cs" />
     <Compile Include="Operation\CommonParameters.cs" />
     <Compile Include="Operation\CustomGeocode.cs" />
+    <Compile Include="Operation\Attachments.cs" />
     <Compile Include="Operation\Find.cs" />
     <Compile Include="Operation\GeometryServerOperation.cs" />
     <Compile Include="Operation\PortalResponse.cs" />

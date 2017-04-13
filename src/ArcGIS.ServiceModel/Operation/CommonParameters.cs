@@ -22,6 +22,10 @@ namespace ArcGIS.ServiceModel.Operation
         public const string ServiceReport = "services/{0}/report";
         public const string ArcGISOnlineSearch = "search";
         public const string ServerInfoRoute = "rest/info";
+        public const string QueryAttachments = "{0}/attachments";
+        public const string GetAttachment = "{0}/attachments/{1}";
+        public const string DeleteAttachments = "{0}/deleteAttachments";
+        public const string AddAttachment = "{0}/addAttachment";
     }
 
     /// <summary>

@@ -5,6 +5,7 @@
     using Operation;
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Net.Http;
     using System.Net.Http.Headers;
@@ -259,6 +260,90 @@
             return result;
         }
 
+
+        /// <summary>
+        /// Call the attachments operation, note that since this can return more than one geometry type you will need to deserialize
+        /// the geometry string on the result set e.g.
+        /// foreach (var result in response.Results.Where(r => r.Geometry != null))
+        /// {
+        ///     result.Geometry = ServiceStack.Text.JsonSerializer.DeserializeFromString(result.Geometry.SerializeToString(), TypeMap[result.GeometryType]());
+        /// }
+        /// </summary>
+        /// <param name="attachmentQueryOptions"></param>
+        /// <param name="ct">Optional cancellation token to cancel pending request</param>
+        /// <returns></returns>
+        public virtual Task<AttachmentsQueryResponse> AttachmentsQuery(AttachmentsQuery attachmentQueryOptions, CancellationToken ct = default(CancellationToken))
+        {
+            return Get<AttachmentsQueryResponse, AttachmentsQuery>(attachmentQueryOptions, ct);
+        }
+
+        /// <summary>
+        /// Call the attachments operation, note that since this can return more than one geometry type you will need to deserialize
+        /// the geometry string on the result set e.g.
+        /// foreach (var result in response.Results.Where(r => r.Geometry != null))
+        /// {
+        ///     result.Geometry = ServiceStack.Text.JsonSerializer.DeserializeFromString(result.Geometry.SerializeToString(), TypeMap[result.GeometryType]());
+        /// }
+        /// </summary>
+        /// <param name="attachmentDeleteOptions"></param>
+        /// <param name="ct">Optional cancellation token to cancel pending request</param>
+        /// <returns></returns>
+        public virtual Task<AttachmentsDeleteResponse> AttachmentsDelete(AttachmentsDelete attachmentDeleteOptions, CancellationToken ct = default(CancellationToken))
+        {
+            return Post<AttachmentsDeleteResponse, AttachmentsDelete>(attachmentDeleteOptions, ct);
+        }
+
+        /// <summary>
+        /// Call the attachments operation, note that since this can return more than one geometry type you will need to deserialize
+        /// the geometry string on the result set e.g.
+        /// foreach (var result in response.Results.Where(r => r.Geometry != null))
+        /// {
+        ///     result.Geometry = ServiceStack.Text.JsonSerializer.DeserializeFromString(result.Geometry.SerializeToString(), TypeMap[result.GeometryType]());
+        /// }
+        /// </summary>
+        /// <param name="attachmentGetFileOptions"></param>
+        /// <param name="ct">Optional cancellation token to cancel pending request</param>
+        /// <returns></returns>
+        public virtual async Task<AttachmentsGetFileResponse> AttachmentsGet(AttachmentsGetFile attachmentGetFileOptions, CancellationToken ct = default(CancellationToken))
+        {
+            var result = new AttachmentsGetFileResponse();
+            var url = attachmentGetFileOptions.BuildAbsoluteUrl(RootUrl) + AsRequestQueryString(Serializer, attachmentGetFileOptions);
+            var uri = await PrepareUri(url, ct);
+            try
+            {
+                var response = await GetGetResponse(uri, ct);
+                var byteArray = await response.Content.ReadAsByteArrayAsync();
+                result.AttachmentsGetFileResult = new AttachmentsGetFileResult
+                {
+                    ContentType = response.Content.Headers.ContentType.MediaType,
+                    Name = response.Content.Headers.ContentDisposition.FileName,
+                    File= byteArray
+                };
+
+            }
+            catch (TaskCanceledException tce)
+            {
+                var error = "GET cancelled (exception swallowed)";
+                _logger.WarnException(error, tce);
+                result.Error = new ArcGISError { Message = error };
+            }
+
+            return result;
+        }
+
+        public Task<AddAttachmentResponse> AttachmentAdd(AttachmentToPost attachment)
+        {
+            return AttachmentAdd(attachment, CancellationToken.None);
+        }
+
+        public Task<AddAttachmentResponse> AttachmentAdd(AttachmentToPost attachment, CancellationToken ct)
+        {
+            Guard.AgainstNullArgument("attachment", attachment);
+            Guard.AgainstNullArgumentProperty("attachment", "Attachment", attachment.Attachment);
+
+            return PostAttachments<AddAttachmentResponse, AttachmentToPost>(attachment, ct);
+        }
+
         async Task<Token> CheckGenerateToken(CancellationToken ct)
         {
             if (TokenProvider == null) return null;
@@ -307,10 +392,49 @@
 
         protected async Task<T> Get<T>(string url, CancellationToken ct) where T : IPortalResponse
         {
+            if (ct.IsCancellationRequested) return default(T);
+
+            var uri = await PrepareUri(url, ct);
+            string resultString = string.Empty;
+            try
+            {
+                var response = await GetGetResponse(uri, ct);
+                resultString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            catch (TaskCanceledException tce)
+            {
+                _logger.WarnException("GET cancelled (exception swallowed)", tce);
+                return default(T);
+            }
+
+            var result = Serializer.AsPortalResponse<T>(resultString);
+            if (result.Error != null)
+            {
+                throw new InvalidOperationException(result.Error.ToString());
+            }
+
+            if (IncludeHypermediaWithResponse) result.Links = new List<Link> { new Link(uri.AbsoluteUri) };
+            return result;
+        }
+
+        protected async Task<HttpResponseMessage> GetGetResponse(Uri uri, CancellationToken ct)
+        {
+            if (CancelPendingRequests)
+            {
+                _httpClient.CancelPendingRequests();
+            }
+
+            var response = await _httpClient.GetAsync(uri, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return response;
+        }
+
+        protected async Task<Uri> PrepareUri(string url, CancellationToken ct)
+        {
             Guard.AgainstNullArgument("url", url);
 
             var token = await CheckGenerateToken(ct).ConfigureAwait(false);
-            if (ct.IsCancellationRequested) return default(T);
+
 
             if (!url.Contains("f=")) url += (url.Contains("?") ? "&" : "?") + "f=json";
             if (token != null && !string.IsNullOrWhiteSpace(token.Value) && !url.Contains("token="))
@@ -328,33 +452,7 @@
             }
             _logger.DebugFormat("GET {0}", uri.AbsoluteUri);
 
-            if (CancelPendingRequests)
-            {
-                _httpClient.CancelPendingRequests();
-            }
-
-            string resultString = string.Empty;
-            try
-            {
-                HttpResponseMessage response = await _httpClient.GetAsync(uri, ct).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-
-                resultString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            }
-            catch (TaskCanceledException tce)
-            {
-                _logger.WarnException("GET cancelled (exception swallowed)", tce);
-                return default(T);
-            }
-
-            var result = Serializer.AsPortalResponse<T>(resultString);
-            if (result.Error != null)
-            {
-                throw new InvalidOperationException(result.Error.ToString());
-            }
-
-            if (IncludeHypermediaWithResponse) result.Links = new List<Link> { new Link(uri.AbsoluteUri) };
-            return result;
+            return uri;
         }
 
         protected async Task<T> Post<T, TRequest>(TRequest requestObject, CancellationToken ct)
@@ -430,6 +528,68 @@
             }
 
             if (IncludeHypermediaWithResponse) result.Links = new List<Link> { new Link(uri.AbsoluteUri, requestObject) };
+            return result;
+        }
+
+        protected async Task<T> PostAttachments<T, TRequest>(TRequest requestObject, CancellationToken ct)
+        where TRequest : CommonParameters, IAttachment, IEndpoint
+        where T : IPortalResponse
+        {
+            var endpoint = requestObject;
+            var url = endpoint.BuildAbsoluteUrl(RootUrl).Split('?').FirstOrDefault();
+
+            var token = await CheckGenerateToken(ct);
+            if (ct.IsCancellationRequested) return default(T);
+
+            // these should have already been added
+            if (string.IsNullOrWhiteSpace(requestObject.Token) && token != null && !string.IsNullOrWhiteSpace(token.Value))
+            {
+                requestObject.Token = token.Value;
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(token.Value);
+                if (token.AlwaysUseSsl) url = url.Replace("http:", "https:");
+            }
+
+            _httpClient.CancelPendingRequests();
+
+            Uri uri;
+            bool validUrl = Uri.TryCreate(url, UriKind.Absolute, out uri);
+            if (!validUrl)
+                throw new HttpRequestException(string.Format("Not a valid url: {0}", url));
+
+            System.Diagnostics.Debug.WriteLine(uri);
+            string resultString = string.Empty;
+            var attachment = (IAttachment)requestObject;
+
+            using (var content = new MultipartFormDataContent())
+            {
+                var streamContent = new StreamContent(new MemoryStream(attachment.Attachment));
+                var header = new ContentDispositionHeaderValue("form-data");
+                header.Name = "\"attachment\"";
+                header.FileName = attachment.FileName;
+                streamContent.Headers.ContentDisposition = header;
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(attachment.ContentType);
+
+                content.Add(streamContent);
+                content.Add(new StringContent("json"), "f");
+                if (!string.IsNullOrWhiteSpace(requestObject.Token)) content.Add(new StringContent(requestObject.Token), "token");
+
+                try
+                {
+                    using (var message = await _httpClient.PostAsync(uri, content))
+                    {
+                        message.EnsureSuccessStatusCode();
+                        resultString = await message.Content.ReadAsStringAsync();
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                    return default(T);
+                }
+            }
+
+            var result = Serializer.AsPortalResponse<T>(resultString);
+            if (result.Error != null) throw new InvalidOperationException(result.Error.ToString());
+
             return result;
         }
 
