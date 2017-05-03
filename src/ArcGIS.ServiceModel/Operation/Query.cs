@@ -363,6 +363,66 @@ namespace ArcGIS.ServiceModel.Operation
     }
 
     /// <summary>
+    /// Perform a query that only returns statistic results
+    /// </summary>
+
+    public enum OutStatisticType
+    {
+        [DataMember(Name = "count")]
+        Count,
+
+        [DataMember(Name = "sum")]
+        Sum,
+    }
+
+    public class OutStatisticParameter
+    {
+        public OutStatisticType Type { get; set; }
+
+        [DataMember(Name = "onStatisticField")]
+        public string OnStatisticField { get; set; }
+
+        [DataMember(Name = "statisticType")]
+        public string StatisticType => Type.ToString().ToLower();
+    }
+
+    [DataContract]
+    public class QueryForStatistics : Query
+    {
+        public QueryForStatistics(ArcGISServerEndpoint endpoint)
+            : base(endpoint)
+        {
+            ReturnGeometry = false;
+            GroupByFields = new List<string>();
+            OutStatistics = new List<OutStatisticParameter>();
+        }
+
+        public List<string> GroupByFields { get; set; }
+
+        [DataMember(Name = "outStatistics")]
+        public List<OutStatisticParameter> OutStatistics { get; set; }
+
+        [DataMember(Name = "groupByFieldsForStatistics")]
+        public string GroupByFieldsParameter => string.Join(",", GroupByFields);
+    }
+
+    [DataContract]
+    public class QueryForStatisticsResponse : PortalResponse
+    {
+        [DataMember(Name = "displayFieldName")]
+        public string DisplayFieldName { get; set; }
+
+        [DataMember(Name = "features")]
+        public IEnumerable<Feature<Point>> Features { get; set; }
+
+        [DataMember(Name = "fieldAliases")]
+        public Dictionary<string, string> FieldAliases { get; set; }
+
+        [DataMember(Name = "fields")]
+        public IEnumerable<Field> Fields { get; set; }
+    }
+
+    /// <summary>
     /// Perform a query that only returns a count of the results
     /// </summary>
     [DataContract]

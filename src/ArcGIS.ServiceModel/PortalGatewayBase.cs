@@ -142,6 +142,17 @@
         }
 
         /// <summary>
+        /// Call the query operation for statistics
+        /// </summary>
+        /// <param name="queryOptions">Query filter parameters</param>
+        /// <param name="ct">Optional cancellation token to cancel pending request</param>
+        /// <returns>The matching features for the query</returns>
+        public virtual Task<QueryForStatisticsResponse> QueryForStatistics(QueryForStatistics queryOptions, CancellationToken ct = default(CancellationToken))
+        {
+            return Get<QueryForStatisticsResponse, QueryForStatistics>(queryOptions, ct);
+        }
+
+        /// <summary>
         /// Call the count operation for the query resource.
         /// </summary>
         /// <param name="queryOptions">Query filter parameters</param>
