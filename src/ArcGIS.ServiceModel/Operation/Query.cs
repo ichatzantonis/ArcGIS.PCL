@@ -373,6 +373,15 @@ namespace ArcGIS.ServiceModel.Operation
 
         [DataMember(Name = "sum")]
         Sum,
+
+        [DataMember(Name = "min")]
+        Min,
+
+        [DataMember(Name = "max")]
+        Max,
+
+        [DataMember(Name = "avg")]
+        Avg,
     }
 
     public class OutStatisticParameter
